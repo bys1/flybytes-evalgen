@@ -1,0 +1,7 @@
+recadd(n) = if n <= 1 then
+                1
+            else
+                1 + recadd(n-1)
+            end
+
+main() = recadd(200000)

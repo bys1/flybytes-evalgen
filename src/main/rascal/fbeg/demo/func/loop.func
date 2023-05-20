@@ -1,0 +1,9 @@
+main() =    let
+                i = 0
+            in
+                while i < 1000000 do
+                    i := i + 1
+                then
+                    i
+                end
+            end
