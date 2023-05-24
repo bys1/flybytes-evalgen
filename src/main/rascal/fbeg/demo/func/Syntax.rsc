@@ -14,6 +14,7 @@ syntax Exp  = let:  "let" {Binding ","}* "in" Exp "end"
             | loop: "while" Exp "do" Exp "then" Exp "end"
             | bracket "(" Exp ")"
             | var: Ident
+            | avar: Ident "[" Exp "]"
             | nat: Natural
             | call: Ident "(" {Exp ","}* ")"
             > non-assoc (
@@ -25,13 +26,18 @@ syntax Exp  = let:  "let" {Binding ","}* "in" Exp "end"
                 | left sub: Exp "-" Exp
             )
             > non-assoc (
-                  non-assoc gt: Exp "\>" Exp
+                  non-assoc eq: Exp "==" Exp
+                | non-assoc neq: Exp "!=" Exp
+                | non-assoc gt: Exp "\>" Exp
                 | non-assoc lt: Exp "\<" Exp
                 | non-assoc geq: Exp "\>=" Exp
                 | non-assoc leq: Exp "\<=" Exp
             )
             > right assign: Ident ":=" Exp
+            | right aassign: Ident "[" Exp "]" ":=" Exp
             > right seq: Exp ";" Exp
             ;
 
-syntax Binding = binding: Ident "=" Exp;
+syntax Binding  = binding: Ident "=" Exp
+                | array: Ident "[" Exp "]"
+                ;

@@ -1,0 +1,24 @@
+mandelbrot(size) =  let
+                        bitNum = 0,
+                        byteAcc = 0,
+                        y = 0
+                    in
+                        while y < size do
+                            let
+                                x = 0
+                            in
+                                while x < size do
+                                    let
+                                        Zr = 0,
+                                        Zi = 0,
+                                        Tr = 0,
+                                        Ti = 0,
+                                        Cr = 0
+                                then
+                                    //
+                                end
+                            end
+                        then
+                            //
+                        end
+                    end

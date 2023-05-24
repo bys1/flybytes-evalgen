@@ -3,6 +3,7 @@ module fbeg::EvalGen
 import Type;
 import List;
 import Map;
+import IO;
 
 import lang::flybytes::Syntax;
 import lang::flybytes::Compiler;

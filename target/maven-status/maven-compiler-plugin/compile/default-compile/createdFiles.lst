@@ -1,5 +1,6 @@
 fbeg/wrapper/FloatWrapper.class
 fbeg/EvalGen.class
+fbeg/demo/func/Memory.class
 fbeg/Switch.class
 fbeg/EvalException.class
 fbeg/wrapper/BooleanWrapper.class

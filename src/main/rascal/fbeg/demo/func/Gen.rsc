@@ -85,6 +85,15 @@ list[Stat] actions("var", [Symbol name]) = [
     )
 ];
 
+list[Stat] actions("avar", [Symbol name, Symbol index]) = [
+    \return(
+        aload(
+            findObject(fromRascalType(getArg(name), string()), array(integer())),
+            recEval(index)
+        )
+    )
+];
+
 list[Stat] actions("nat", [Symbol n]) = [
     setRetEnv(),
     \return(fromRascalType(getArg(n), integer()))
@@ -126,6 +135,8 @@ list[Stat] actions("add", [Symbol lhs, Symbol rhs]) = [\return(add(recEval(lhs),
 list[Stat] actions("sub", [Symbol lhs, Symbol rhs]) = [\return(sub(recEval(lhs), recEval(rhs, env = retEnv())))];
 list[Stat] actions("mul", [Symbol lhs, Symbol rhs]) = [\return(mul(recEval(lhs), recEval(rhs, env = retEnv())))];
 list[Stat] actions("div", [Symbol lhs, Symbol rhs]) = [\return(div(recEval(lhs), recEval(rhs, env = retEnv())))];
+list[Stat] actions("eq",  [Symbol lhs, Symbol rhs]) = [\return(Exp::eq (recEval(lhs), recEval(rhs, env = retEnv())))];
+list[Stat] actions("neq", [Symbol lhs, Symbol rhs]) = [\return(ne (recEval(lhs), recEval(rhs, env = retEnv())))];
 list[Stat] actions("gt",  [Symbol lhs, Symbol rhs]) = [\return(gt (recEval(lhs), recEval(rhs, env = retEnv())))];
 list[Stat] actions("lt",  [Symbol lhs, Symbol rhs]) = [\return(lt (recEval(lhs), recEval(rhs, env = retEnv())))];
 list[Stat] actions("geq", [Symbol lhs, Symbol rhs]) = [\return(ge (recEval(lhs), recEval(rhs, env = retEnv())))];
@@ -144,12 +155,34 @@ list[Stat] actions("assign", [Symbol name, Symbol exp]) = [
     \return(load("exp"))
 ];
 
+list[Stat] actions("aassign", [Symbol name, Symbol index, Symbol exp]) = [
+    decl(integer(), "exp", init = recEval(exp)),
+    astore(
+        findObject(fromRascalType(getArg(name), string()), array(integer())),
+        recEval(index, env = retEnv()),
+        load("exp")
+    ),
+    setRetEnv(),
+    \return(load("exp"))
+];
+
 list[Stat] actions("binding", [Symbol ident, Symbol exp]) = [
     putWrappedField(
         fromRascalType(getArg(ident), string()),
         recEval(exp),
         integer(),
         replace = true                                          // Always replace to allow shadowing
+    ),
+    \return(iconst(0))
+];
+
+list[Stat] actions("array", [Symbol ident, Symbol size]) = [
+    putObjectField(
+        fromRascalType(getArg(ident), string()),
+        newArray(
+            array(integer()),
+            recEval(size)
+        )
     ),
     \return(iconst(0))
 ];

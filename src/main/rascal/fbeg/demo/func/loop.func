@@ -4,6 +4,6 @@ main() =    let
                 while i < 1000000 do
                     i := i + 1
                 then
-                    i
+                    <i>
                 end
             end

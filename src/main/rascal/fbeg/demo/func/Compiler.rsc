@@ -7,6 +7,8 @@ import lang::flybytes::Compiler;
 
 import List;
 
+int cnt = 0;
+
 void compileProg(Prog p, str name) {
     compileClass(compile(p, name), |cwd:///<name>.class|);
 }
@@ -63,6 +65,7 @@ Exp compile(loop(Expr condition, Expr then, Expr result)) = sblock(
 );
 
 Exp compile(var(str name)) = load(name);
+Exp compile(avar(str name, Expr index)) = aload(load(name), compile(index));
 Exp compile(nat(int n)) = iconst(n);
 
 Exp compile(call(str name, list[Expr] args)) = invokeStatic(
@@ -78,6 +81,8 @@ Exp compile(add(Expr lhs, Expr rhs)) = add(compile(lhs), compile(rhs));
 Exp compile(sub(Expr lhs, Expr rhs)) = sub(compile(lhs), compile(rhs));
 Exp compile(mul(Expr lhs, Expr rhs)) = mul(compile(lhs), compile(rhs));
 Exp compile(div(Expr lhs, Expr rhs)) = div(compile(lhs), compile(rhs));
+Exp compile( eq(Expr lhs, Expr rhs)) =  eq(compile(lhs), compile(rhs));
+Exp compile(neq(Expr lhs, Expr rhs)) =  ne(compile(lhs), compile(rhs));
 Exp compile( gt(Expr lhs, Expr rhs)) =  gt(compile(lhs), compile(rhs));
 Exp compile( lt(Expr lhs, Expr rhs)) =  lt(compile(lhs), compile(rhs));
 Exp compile(geq(Expr lhs, Expr rhs)) =  ge(compile(lhs), compile(rhs));
@@ -85,6 +90,19 @@ Exp compile(leq(Expr lhs, Expr rhs)) =  le(compile(lhs), compile(rhs));
 
 Exp compile(assign(str name, Expr exp)) = sblock([store(name, compile(exp))], load(name));
 
+Exp compile(aassign(str name, Expr index, Expr exp)) {
+    cnt += 1;
+    str tmp = "__FBEG_tmp_<cnt>";
+    return sblock(
+        [
+            decl(integer(), tmp, init = compile(exp)),
+            astore(load(name), compile(index), load(tmp))
+        ],
+        load(tmp)
+    );
+}
+
 Exp compile(seq(Expr lhs, Expr rhs)) = sblock([\do(compile(lhs))], compile(rhs));
 
 Stat compile(binding(str ident, Expr exp)) = decl(integer(), ident, init = compile(exp));
+Stat compile(array(str ident, Expr size)) = decl(array(integer()), ident, init = newArray(array(integer()), compile(size)));

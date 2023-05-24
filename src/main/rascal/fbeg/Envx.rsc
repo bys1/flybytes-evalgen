@@ -66,15 +66,27 @@ Exp findWrapped(Exp key, Type \type, Exp env = load("env"))
 /**
  *  Maps the given key to the given object and returns the new environment.
  *
- *  @param key The key to map to the object.
- *  @param val The object to store in the environment.
- *  @param env The (immutable) environment to which the object should be added.
+ *  @param key  The key to map to the object.
+ *  @param val  The object to store in the environment.
+ *  @param env  The (immutable) environment to which the object should be added.
+ *              Defaults to the local variable "env".
  *
- *  @return The new (immutable) environment containing the newly added object.
+ *  @return     The new (immutable) environment containing the newly added object.
  */
 Exp putObjectCopy(Exp key, Exp val, Exp env = load("env"))
     = invokeInterface(cmi, env, methodDesc(cmi, "__put", [object(), object()]), [key, val]);
 
+/**
+ *  Maps the given key to the given object in the environment, and stores the new
+ *  environment in the given field.
+ *
+ *  @param key      The key to map to the object.
+ *  @param val      The object to store in the environment.
+ *  @param env      The environment to which the object should be added.
+ *                  Defaults to the local variable "env".
+ *  @param field    The name of the field in which the new environment should be stored.
+ *                  Defaults to "retEnv".
+ */
 Stat putObjectField(Exp key, Exp val, Exp env = load("env"), str field = "retEnv")
     = putField(envType(), field, putObjectCopy(key, val, env = env));
 
@@ -153,6 +165,21 @@ Exp putWrappedCopy(Exp key, Exp val, Type \type, Exp env = load("env"), bool rep
     );
 }
 
+/**
+ *  Maps the given key to the given value in the environment, and wraps the value of the given type into a wrapper object.
+ *  The new environment with the added value will be stored in the given field.
+ *  If a wrapper object with the given key is not present in the given environment, a new object will be stored in it.
+ *  If a wrapper object with the given key is present in the given environment, its value will be replaced by the new value
+ *  and this is also reflected to all other environments in which the wrapper object is stored; the wrapper acts as a reference.
+ * 
+ *  @param key      The key to map to the object.
+ *  @param value    The object to store in the environment.
+ *  @param env      Expression representing the environment to use. Defaults to local variable "env".
+ *  @param field    The name of the field in which the new environment should be stored. Defaults to "retEnv".
+ *  @param replace  Defaults to false. If set to true, this function will always create a new wrapper object and store it at the
+ *                  given level. Any existing object will be replaced. This new object will NOT be stored in any other levels, even
+ *                  if an existing object is present in other levels.
+ */
 Stat putWrappedField(Exp key, Exp val, Type \type, Exp env = load("env"), str field = "retEnv", bool replace = false) {
     Stat repl = putObjectField(key, newWrapper(val, \type), env = env, field = field);
     if (replace) return repl;
@@ -244,13 +271,4 @@ private tuple[Type,Type] wrapperType(Type \type) {
         default:            return <object("fbeg.wrapper.ObjectWrapper"), object()>;
     }
     return <object("fbeg.wrapper.<name>Wrapper"), \type>;
-}
-
-private Exp invoke(Exp env, Type ret, str name, list[Type] argTypes, list[Exp] args) {
-    return invokeVirtual(
-        object("fbeg.Env"),
-        env,
-        methodDesc(ret, name, argTypes),
-        args
-    );
 }

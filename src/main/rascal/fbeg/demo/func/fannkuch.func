@@ -1,0 +1,113 @@
+fannkuch(n) =   let
+                    perm[n],
+                    perm1[n],
+                    count[n],
+                    maxFlipsCount = 0,
+                    r = n,
+                    running = 1
+                in
+                    let
+                        i = 0
+                    in
+                        while i < n do
+                            perm1[i] := i;
+                            i := i + 1
+                        then
+                            0
+                        end
+                    end;
+                    while running == 1 do
+
+                        while r != 1 do
+                            count[r-1] := r;
+                            r := r - 1
+                        then
+                            0
+                        end;
+
+                        let
+                            i = 0
+                        in
+                            while i < n do
+                                perm[i] := perm1[i];
+                                i := i + 1
+                            then
+                                0
+                            end
+                        end;
+
+                        let
+                            flipsCount = 0,
+                            k = 0
+                        in
+                            while (k := perm[0]) != 0 do
+                                let
+                                    k2 = (k + 1) / 2,
+                                    i = 0
+                                in
+                                    while i < k2 do
+                                        let
+                                            temp = perm[i]
+                                        in
+                                            perm[i] := perm[k-i];
+                                            perm[k-i] := temp
+                                        end;
+                                        i := i + 1
+                                    then
+                                        0
+                                    end
+                                end;
+                                flipsCount := flipsCount + 1
+                            then
+                                0
+                            end;
+
+                            if flipsCount > maxFlipsCount then
+                                maxFlipsCount := flipsCount
+                            else
+                                0
+                            end
+                        end;
+
+                        let
+                            running2 = 1
+                        in
+                            while running2 == 1 do
+                                if r == n then
+                                    running := 0;
+                                    running2 := 0
+                                else
+                                    let
+                                        perm0 = perm1[0],
+                                        i = 0
+                                    in
+                                        while i < r do
+                                            let
+                                                j = i + 1
+                                            in
+                                                perm1[i] := perm1[j];
+                                                i := j
+                                            end
+                                        then
+                                            0
+                                        end;
+                                        perm1[r] := perm0
+                                    end;
+                                    count[r] := count[r] - 1;
+                                    if count[r] > 0 then
+                                        running2 := 0
+                                    else
+                                        r := r + 1
+                                    end
+                                end
+                            then
+                                0
+                            end
+                        end
+
+                    then
+                        maxFlipsCount
+                    end
+                end
+
+main() = fannkuch(8)

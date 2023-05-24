@@ -35,8 +35,8 @@ void compileTest() {
             main(
                 "args",
                 [
-                    \decl(object(), "obj", init = null()),
-                    \decl(boolean(), "bool", init = eq(load("obj"), null())),
+                    decl(integer(), "i", init = iconst(2)),
+                    decl(double(), "d", init = coerce(integer(), double(), load("i"))),
                     \return()
                 ]
             )

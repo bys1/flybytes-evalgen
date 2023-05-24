@@ -4,10 +4,11 @@ import fbeg::demo::func::AST;
 
 import List;
 import IO;
+import Type;
 
 alias Res = tuple[int val, Env env];
 alias Fun = tuple[list[str] args, Expr exp];
-alias Env = map[str,int];
+alias Env = map[str,value];
 
 map[str,Fun] funcEnv = ();
 
@@ -27,7 +28,7 @@ Res eval(let(list[Binding] bindings, Expr exp), Env env) {
     for (Binding binding <- bindings)
         copy = eval(binding, copy).env;
     Res res = eval(exp, copy);
-    return <res.val, env>;
+    return <res.val, env + (res.env - (copy - env))>;
 }
 
 Res eval(xcond(Expr condition, Expr then, Expr alt), Env env) {
@@ -45,7 +46,12 @@ Res eval(loop(Expr condition, Expr then, Expr result), Env env) {
     return eval(result, res.env);
 }
 
-Res eval(var(str name), Env env) = <env[name], env>;
+Res eval(var(str name), Env env) = <typeCast(#int, env[name]), env>;
+
+Res eval(avar(str name, Expr index), Env env) {
+    Res idx = eval(index, env);
+    return <typeCast(#list[int], idx.env[name])[idx.val], idx.env>;
+}
 
 Res eval(nat(int n), Env env) = <n, env>;
 
@@ -83,6 +89,18 @@ Res eval(div(Expr lhs, Expr rhs), Env env) {
     return <lres.val / rres.val, rres.env>;
 }
 
+Res eval(eq(Expr lhs, Expr rhs), Env env) {
+    Res lres = eval(lhs, env);
+    Res rres = eval(rhs, lres.env);
+    return <lres.val == rres.val ? 1 : 0, rres.env>;
+}
+
+Res eval(neq(Expr lhs, Expr rhs), Env env) {
+    Res lres = eval(lhs, env);
+    Res rres = eval(rhs, lres.env);
+    return <lres.val != rres.val ? 1 : 0, rres.env>;
+}
+
 Res eval(gt(Expr lhs, Expr rhs), Env env) {
     Res lres = eval(lhs, env);
     Res rres = eval(rhs, lres.env);
@@ -112,9 +130,22 @@ Res eval(assign(str name, Expr exp), Env env) {
     return <res.val, res.env + (name : res.val)>;
 }
 
+Res eval(aassign(str name, Expr index, Expr exp), Env env) {
+    Res idx = eval(index, env);
+    Res res = eval(exp, idx.env);
+    list[int] arr = typeCast(#list[int], res.env[name]);
+    arr[idx.val] = res.val;
+    return <res.val, res.env + (name : arr)>;
+}
+
 Res eval(seq(Expr lhs, Expr rhs), Env env) {
     Res res = eval(lhs, env);
     return eval(rhs, res.env);
 }
 
 Res eval(binding(str ident, Expr exp), Env env) = eval(assign(ident, exp), env);
+
+Res eval(array(str ident, Expr size), Env env) {
+    Res res = eval(size, env);
+    return <res.val, res.env + (ident : [0 | _ <- [0..res.val]])>;
+}
