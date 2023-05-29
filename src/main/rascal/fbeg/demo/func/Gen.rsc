@@ -15,9 +15,11 @@ int(Prog) getEval() {
     return genEval(#(int(Prog)), actions, helperClasses = [getFuncEnvClass()], debug = true);
 }
 
-/*int(Prog, Env) getEvalEnv() {
-    return genEval(#(int(Prog, Env)), actions, helperClasses = [getFuncEnvClass()], debug = true);
-}//*/
+alias Res = tuple[int val, Env globalEnv];
+
+Res(Prog) getEval2() {
+    return genEval(#(Res(Prog)), actions, helperClasses = [getFuncEnvClass()], debug = true);
+}
 
 list[Stat] actions("prog", [Symbol funcs]) = [
     it_decl("it", getArg(funcs)),

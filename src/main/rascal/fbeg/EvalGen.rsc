@@ -63,7 +63,7 @@ private java loc getDir();
     str evalName = "<symbol.name>Eval";
     Symbol ret = ft.symbol.ret;
     map[Symbol, Production] definitions = ft.definitions;
-    map[Symbol, Type] types = (sym : symbolToType(ret) | sym <- definitions) + retTypes;
+    map[Symbol, Type] types = (sym : symbolToType(extractRet(ret)) | sym <- definitions) + retTypes;
     compileHelpers(helperClasses);
     compileEval(symbol, evalName, ret, definitions, types, actions, javaToRascal, fields, helperMethods, addInitEnv(constructorCode, fields),
             addPutEnv(ft, preApplyCode, fields), debug);
@@ -72,7 +72,7 @@ private java loc getDir();
 
 private type[value] addKwTypes(type[&T] t) {
     Symbol s = t.symbol;
-    s.kwTypes = [\value(), \value()];
+    s.kwTypes = [label("env", \value()), label("globalEnv", \value())];
     return type(s, t.definitions);
 }
 
@@ -120,7 +120,7 @@ private type[value] addKwTypes(type[&T] t) {
     str mainName = "<mainSymbol.name>Eval";
     str evalName = "<mainName><symbol.name>";
     Symbol ret = funcType.symbol.ret;
-    Type retType = evalRet == \void() ? symbolToType(ret) : evalRet;
+    Type retType = evalRet == \void() ? symbolToType(extractRet(ret)) : evalRet;
     compileEvalPartial(symbol, evalName, mainName, ret, retType, javaToRascal, preApplyCode);
     return genEvalFunc(funcType, evalName);
 }
@@ -353,7 +353,7 @@ private void compileEval(Symbol symbol, str evalName, Symbol ret, map[Symbol, Pr
                                     []
                                 ),
                                 (
-                                    alt.def.name : getActions(actions, alt.def, alt.symbols, types, debug, src)
+                                    alt.def.name : getActions(actions, alt.def, alt.symbols, types, src)
                                     | alt <- prod.alternatives
                                 ),
                                 def = [
@@ -466,7 +466,7 @@ private Method applyMethod(Type class, Exp instance, Symbol ret, Type retType, S
                     decl(envType(), "globalEnv", init = mapGet(load("map"), "globalEnv")),
                     \if(
                         ne(load("globalEnv"), null()),
-                        [putField(envType(), "globalEnv", load("globalEnv"))]
+                        [putField(envType(), "globalEnv", extractEnv(load("globalEnv")))]
                     ),
                     \return(
                         javaToRascal(
@@ -489,7 +489,7 @@ private Method applyMethod(Type class, Exp instance, Symbol ret, Type retType, S
                                     cond(
                                         Exp::eq(load("env"), null()),
                                         newEnv(),
-                                        load("env")
+                                        extractEnv(load("env"))
                                     )
                                 ]
                             ),
@@ -534,6 +534,20 @@ private Method applyMethod(Type class, Exp instance, Symbol ret, Type retType, S
     );
 }
 
+private Exp extractEnv(Exp env) = invokeVirtual(
+    object("fbeg.Env"),
+    checkcast(
+        env,
+        object("fbeg.Env")
+    ),
+    methodDesc(
+        envType(),
+        "getMap",
+        []
+    ),
+    []
+);
+
 private Exp mapGet(Exp \map, str key) = invokeInterface(
     object("java.util.Map"),
     \map,
@@ -558,6 +572,12 @@ private Type symbolToType(Symbol sym) {
         case \list(Symbol s):   return array(symbolToType(s));
         default:                return object();
     }
+}
+
+private Symbol extractRet(Symbol sym) {
+    if (\tuple(list[Symbol] symbols) := sym)
+        return [s.symbol | s <- symbols, s.name == "val" || s.symbol != \value()][0];
+    return sym;
 }
 
 private Exp convertArray(Exp exp, Symbol s) {
@@ -592,6 +612,7 @@ private Exp callVF(Exp exp, Symbol ret) {
         case \void():           return checkcast(\null(), object());
         case \set(Symbol s):    return vf("ISet",      "set",      [array(object("<vl>IValue"))], [convertArray(exp, s)]);
         case \list(Symbol s):   return vf("IList",     "list",     [array(object("<vl>IValue"))], [convertArray(exp, s)]);
+        case \tuple(list[Symbol] symbols): return vfTuple(exp, symbols);
         default:                return exp;
     }
 }
@@ -605,8 +626,28 @@ private Exp vf(str ret, str name, list[Type] argTypes, list[Exp] args) {
     );
 }
 
-private list[Stat] getActions(list[Stat](str, list[Symbol]) func, Symbol::label(str name, _), list[Symbol] symbols, map[Symbol, Type] types, bool debug,
-        map[str,loc] src) {
+private Exp vfTuple(Exp exp, list[Symbol] symbols) {
+    list[Exp] args = [s.name == "val" || s.symbol != \value()
+        ? callVF(exp, s.symbol)
+        : invokeVirtual(
+            object("fbeg.Env"),
+            newInstance(
+                object("fbeg.Env"),
+                constructorDesc([object("<vl>IValueFactory")]),
+                [getField(object("<vl>IValueFactory"), "vf")]
+            ),
+            methodDesc(
+                object("fbeg.Env"),
+                "setMap",
+                [envType()]
+            ),
+            [getField(envType(), s.name)]
+        )
+    | s <- symbols];
+    return vf("ITuple", "tuple", [array(object("<vl>IValue"))], [newInitArray(array(object("<vl>IValue")), args)]);
+}
+
+private list[Stat] getActions(list[Stat](str, list[Symbol]) func, Symbol::label(str name, _), list[Symbol] symbols, map[Symbol, Type] types, map[str,loc] src) {
     currentSymbols = symbols;
     declaredSymbols = typeCast(#map[str, Symbol], ());
     retTypes = types;

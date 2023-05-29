@@ -15,7 +15,7 @@ Prog p;
 int(Prog) ev;
 
 @reflect
-@javaClass{fbeg.func.demo.Benchmarks}
+@javaClass{fbeg.demo.func.Benchmarks}
 private java &F getFunc(type[&F] t);
 
 void benchmark(str program) = benchmark(parseProg(|cwd:///src/main/rascal/fbeg/demo/func/<program>.func|));

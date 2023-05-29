@@ -9,6 +9,14 @@ private Type cpm = object("io.usethesource.capsule.core.PersistentTrieMap");
 
 private int cnt = 0;
 
+alias Env = value;
+
+@javaClass{fbeg.Env}
+java Env makeEnv();
+
+@javaClass{fbeg.Env}
+java map[str,value] envToMap(Env env);
+
 /**
  *  Returns a new, empty environment.
  */

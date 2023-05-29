@@ -35,8 +35,10 @@ void compileTest() {
             main(
                 "args",
                 [
-                    decl(integer(), "i", init = iconst(2)),
-                    decl(double(), "d", init = coerce(integer(), double(), load("i"))),
+                    decl(array(double()), "u", init = newArray(
+                        array(double()),
+                        dconst(3.)
+                    )),
                     \return()
                 ]
             )
