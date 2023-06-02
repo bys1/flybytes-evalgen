@@ -1,0 +1,5 @@
+var1 = 8;
+var2 = 2;
+x = 4 * var1;
+y = var1 + vsr2;
+return x + y

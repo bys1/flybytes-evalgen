@@ -4,229 +4,199 @@ import lang::flybytes::Syntax;
 
 import fbeg::api::Types;
 
-private Type cmi = object("io.usethesource.capsule.Map$Immutable");
-private Type cpm = object("io.usethesource.capsule.core.PersistentTrieMap");
+alias Env = value;
 
 private int cnt = 0;
 
-alias Env = value;
+/**
+ * Expression returning the "env" field from the current class.
+ */
+Exp defaultEnvField = getField(object("fbeg.Env"), "env");
 
+/**
+ * Returns a new, empty environment.
+ */
 @javaClass{fbeg.Env}
-java Env makeEnv();
-
-@javaClass{fbeg.Env}
-java map[str,value] envToMap(Env env);
+java Env newEnv();
 
 /**
- *  Returns a new, empty environment.
+ * Returns a Type representing the Env class.
  */
-Exp newEnv() = invokeStatic(cpm, methodDesc(cmi, "of", []), []);
+Type getEnvType() {
+    return object("fbeg.Env");
+}
 
 /**
- *  Returns the environment stored in the field "globalEnv".
- */
-Exp globalEnv() = getField(cmi, "globalEnv");
-
-/**
- *  Returns the environment stored in the field "retEnv".
- *  This field holds the environment returned by the most recent recEval call.
- */
-Exp retEnv() = getField(cmi, "retEnv");
-
-/**
- *  Stores an environment in the field "retEnv". This is used to return an environment
- *  from a recEval call, or can for example be used to initialize the retEnv field to
- *  the current environment prior to a loop that uses and assigns to this field.
- */
-Stat setRetEnv(Exp val = load("env")) = putField(cmi, "retEnv", val);
-
-/**
- *  Returns the environment Type.
- */
-Type envType() = cmi;
-
-/**
- *  Finds the object with the given key in the given environment.
+ * Returns the current highest level.
  *
- *  @param key The key of the object to find.
- *  @param env The environment in which to search. Defaults to the local variable "env".
- *
- *  @return The value found in the environment.
+ * @param env Expression representing the environment to use. Defaults to the "env" field.
  */
-Exp findObject(Exp key, Exp env = load("env"))
-    = invokeInterface(cmi, env, methodDesc(object(), "get", [object()]), [key]);
+Exp getLevel(Exp env = defaultEnvField) {
+    return invoke(env, integer(), "getLevel", [], []);
+}
 
-Exp findObject(Exp key, Type \type, Exp env = load("env"))
-    = fromObject(findObject(key, env = env), \type);
+/**
+ * Increases the level and returns the new highest level.
+ * The newly created level will be empty.
+ *
+ * @param env Expression representing the environment to use. Defaults to the "env" field.
+ */
+Exp addEmptyLevel(Exp env = defaultEnvField) {
+    return invoke(env, integer(), "addEmptyLevel", [], []);
+}
+
+/**
+ * Increases the level and returns the new highest level.
+ * The newly created level will hold all objects stored at the given level.
+ * 
+ * @param baseLevel The level from which the contents should be copied to the new level. By default, the current highest level is used.
+ * @param env       Expression representing the environment to use. Defaults to the "env" field.
+ */
+Exp addLevel(Exp baseLevel = null(), Exp env = defaultEnvField) {
+    return baseLevel == null()
+        ? invoke(env, integer(), "addLevel", []         , []         )
+        : invoke(env, integer(), "addLevel", [integer()], [baseLevel]);
+}
+
+/**
+ * Decreases the level (removing the highest level) and returns the new highest level.
+ *
+ * @param env Expression representing the environment to use. Defaults to the "env" field.
+ */
+Exp removeLevel(Exp env = defaultEnvField) {
+    return invoke(env, integer(), "removeLevel", [], []);
+}
+
+/**
+ * Increases the level index without changing the levels.
+ * This may be used to pretend having a different highest level for an evaluation.
+ * Before increasing the index, a level at the increased index has to be created with addLevel or similar methods.
+ * If this is not done, the behaviour of putObject/findObject and similar methods after this call is undefined.
+ */
+Exp levelUp(Exp env = defaultEnvField) {
+    return invoke(env, integer(), "levelUp", [], []);
+}
+
+/**
+ * Decreases the level index without changing the levels.
+ * This may be used to pretend having a different highest level for an evaluation.
+ */
+Exp levelDown(Exp env = defaultEnvField) {
+    return invoke(env, integer(), "levelDown", [], []);
+}
+
+/**
+ * Finds the object with the given key at the given level.
+ * 
+ * @param key   The key of the object to find.
+ * @param level The level to search at. By default, it will search at the highest level.
+ * @param env   Expression representing the environment to use. Defaults to the "env" field.
+ *
+ * @return The value found in the environment.
+ */
+Exp findObject(Exp key, Exp level = null(), Exp env = defaultEnvField) {
+    return level == null()
+        ? invoke(env, object(), "findObject", [string()           ], [key       ])
+        : invoke(env, object(), "findObject", [string(), integer()], [key, level]);
+}
+
+/**
+ * Finds the object with the given key at the given level and converts it to the given type.
+ * 
+ * @param key   The key of the object to find.
+ * @param type  The type to convert the found object to. If this is a primitive type, the ...value()
+ *              method of the corresponding class will be found on the called object.
+ *              For other types, a checkcast will be used to convert the object.
+ * @param level The level to search at. By default, it will search at the highest level.
+ * @param env   Expression representing the environment to use. Defaults to the "env" field.
+ *
+ * @return The value found in the environment.
+ */
+Exp findObject(Exp key, Type \type, Exp level = null(), Exp env = defaultEnvField) {
+    return fromObject(findObject(key, level = level, env = env), \type);
+}
 
 /**
  * Finds the wrapped object with the given key at the given level, and returns the (unwrapped) value.
  *
  * @param key   The key of the object to find.
  * @param type  The type of the object to find. A value of this type will be returned.
- * @param env   The environment in which to search. Defaults to the local variable "env".
+ * @param level The levle to search at. By default, it will search at the highest level.
+ * @param env   Expression representing the environment to use. Defaults to the "env" field.
  *
  * @return The (unwrapped) value found in the environment.
  */
-Exp findWrapped(Exp key, Type \type, Exp env = load("env"))
-    = getWrapper(findObject(key, env = env), \type);
-
-/**
- *  Maps the given key to the given object and returns the new environment.
- *
- *  @param key  The key to map to the object.
- *  @param val  The object to store in the environment.
- *  @param env  The (immutable) environment to which the object should be added.
- *              Defaults to the local variable "env".
- *
- *  @return     The new (immutable) environment containing the newly added object.
- */
-Exp putObjectCopy(Exp key, Exp val, Exp env = load("env"))
-    = invokeInterface(cmi, env, methodDesc(cmi, "__put", [object(), object()]), [key, val]);
-
-/**
- *  Maps the given key to the given object in the environment, and stores the new
- *  environment in the given field.
- *
- *  @param key      The key to map to the object.
- *  @param val      The object to store in the environment.
- *  @param env      The environment to which the object should be added.
- *                  Defaults to the local variable "env".
- *  @param field    The name of the field in which the new environment should be stored.
- *                  Defaults to "retEnv".
- */
-Stat putObjectField(Exp key, Exp val, Exp env = load("env"), str field = "retEnv")
-    = putField(envType(), field, putObjectCopy(key, val, env = env));
-
-/**
- *  Maps the given key to the given object in the environment in the given variable.
- *  This function loads the environment variable with the given name and stores the
- *  new environment in the same variable, thus overwriting the old environment.
- *
- *  @param key      The key to map to the object.
- *  @param val      The object to store in the environment.
- *  @param envVar   The name of the (non-final) local variable holding the environment. Defaults to "env".
- */
-Stat putObject(Exp key, Exp val, str envVar = "env")
-    = store(envVar, putObjectCopy(key, val, env = load(envVar)));
-
-/**
- *  Maps the given key to the given primitive object in the environment.
- *  The provided value should be a primitive of the specified type, and will be
- *  converted to the corresponding class by calling the valueOf(...) method of that class.
- * 
- *  @param key      The key to map to the object.
- *  @param value    The object to store in the environment.
- *  @param type     The primitive type of the value to be stored.
- *  @param env      The environment to use. Defaults to the local variable "env".
- */
-Exp putObjectCopy(Exp key, Exp val, Type \type, Exp env = load("env"))
-    = putObjectCopy(key, toObject(val, \type), env = env);
-
-Stat putObjectField(Exp key, Exp val, Type \type, Exp env = load("env"), str field = "retEnv")
-    = putField(envType(), field, putObjectCopy(key, toObject(val, \type), env = env));
-
-/**
- *  Maps the given key to the given primitive object in the environment.
- *  The provided value should be a primitive of the specified type, and will be
- *  converted to the corresponding class by calling the valueOf(...) method of that class.
- *  This function loads the environment variable with the given name and stores the
- *  new environment in the same variable, thus overwriting the old environment.
- * 
- *  @param key      The key to map to the object.
- *  @param value    The object to store in the environment.
- *  @param type     The primitive type of the value to be stored.
- *  @param envVar   The name of the (non-final) local variable holding the environment. Defaults to "env".
- */
-Stat putObject(Exp key, Exp val, Type \type, str envVar = "env")
-    = putObject(key, toObject(val, \type), envVar = envVar);
-
-/**
- *  Maps the given key to the given value in the environment, and wraps the value of the given type into a wrapper object.
- *  If a wrapper object with the given key is not present in the given environment, a new object will be stored in it.
- *  If a wrapper object with the given key is present in the given environment, its value will be replaced by the new value
- *  and this is also reflected to all other environments in which the wrapper object is stored; the wrapper acts as a reference.
- * 
- *  @param key      The key to map to the object.
- *  @param value    The object to store in the environment.
- *  @param env      Expression representing the environment to use. Defaults to local variable "env".
- *  @param replace  Defaults to false. If set to true, this function will always create a new wrapper object and store it at the
- *                  given level. Any existing object will be replaced. This new object will NOT be stored in any other levels, even
- *                  if an existing object is present in other levels.
- */
-Exp putWrappedCopy(Exp key, Exp val, Type \type, Exp env = load("env"), bool replace = false) {
-    Exp repl = putObjectCopy(key, newWrapper(val, \type), env = env);
-    if (replace) return repl;
-    tuple[Type w, Type v] t = wrapperType(\type);
-    cnt += 1;
-    str wrapper = "__FBEG_tmp_<cnt>";
-    return sblock(
-        [decl(t.w, wrapper, init = findObject(key, t.w, env = env))],
-        cond(
-            eq(load(wrapper), null()),
-            repl,
-            sblock(
-                [putWrapper(load(wrapper), val, \type)],
-                env
-            )
-        )
-    );
+Exp findWrapped(Exp key, Type \type, Exp level = null(), Exp env = defaultEnvField) {
+    return getWrapper(findObject(key, level = level, env = env), \type);
 }
 
 /**
- *  Maps the given key to the given value in the environment, and wraps the value of the given type into a wrapper object.
- *  The new environment with the added value will be stored in the given field.
- *  If a wrapper object with the given key is not present in the given environment, a new object will be stored in it.
- *  If a wrapper object with the given key is present in the given environment, its value will be replaced by the new value
- *  and this is also reflected to all other environments in which the wrapper object is stored; the wrapper acts as a reference.
+ * Maps the given key to the given object in the environment.
+ * The object is stored in the environment at the given level.
+ * The object will NOT be stored in any level above the given level.
  * 
- *  @param key      The key to map to the object.
- *  @param value    The object to store in the environment.
- *  @param env      Expression representing the environment to use. Defaults to local variable "env".
- *  @param field    The name of the field in which the new environment should be stored. Defaults to "retEnv".
- *  @param replace  Defaults to false. If set to true, this function will always create a new wrapper object and store it at the
+ * @param key   The key to map to the object.
+ * @param value The object to store in the environment.
+ * @param level The level at which the object should be stored. By default, the object will be stored at the highest level.
+ * @param env   Expression representing the environment to use. Defaults to the "env" field.
+ * @param inc   Defaults to false. If set to true, the level is increased and the object is stored in the new highest
+ *              level. The specified level (or the current highest level if unspecified) is the level that is copied
+ *              to the newly created level.
+ */
+Stat putObject(Exp key, Exp val, Exp level = null(), Exp env = defaultEnvField, bool inc = false) {
+    str method = inc ? "putObjectInc" : "putObject";
+    return level == null()
+        ? \do(invoke(env, \void(), method, [string(), object()           ], [key, val       ]))
+        : \do(invoke(env, \void(), method, [string(), object(), integer()], [key, val, level]));
+}
+
+/**
+ * Maps the given key to the given primitive object in the environment.
+ * The provided value should be a primitive of the specified type, and will be
+ * converted to the corresponding class by calling the valueOf(...) method of that class.
+ * The object is stored in the environment at the given level.
+ * The object will NOT be stored in any level above the given level.
+ * 
+ * @param key   The key to map to the object.
+ * @param value The object to store in the environment.
+ * @param type  The primitive type of the value to be stored.
+ * @param level The level at which the object should be stored. By default, the object will be stored at the highest level.
+ * @param env   Expression representing the environment to use. Defaults to the "env" field.
+ * @param inc   Defaults to false. If set to true, the level is increased and the object is stored in the new highest
+ *              level. The specified level (or the current highest level if unspecified) is the level that is copied
+ *              to the newly created level.
+ */
+Stat putObject(Exp key, Exp val, Type \type, Exp level = null(), Exp env = defaultEnvField, bool inc = false) {
+    return putObject(key, toObject(val, \type), level = level, env = env, inc = inc);
+}
+
+/**
+ * Maps the given key to the given value in the environment, and wraps the value of the given type into a wrapper object.
+ * The object is stored in the environment at the given level.
+ * If a wrapper object with the given key is not present at the given level, a new object will be stored at the given level.
+ * The new object will NOT be stored in any level above the given level.
+ * If a wrapper object with the given key is present at the given level, its value will be replaced by the new value and this is
+ * also reflected to other levels at which the wrapper object is stored. This can affect both lower and higher levels.
+ * 
+ * @param key       The key to map to the object.
+ * @param value     The object to store in the environment.
+ * @param level     The level at which the object should be stored. By default, the object will be stored at the highest level.
+ * @param env       Expression representing the environment to use. Defaults to the "env" field.
+ * @param inc       Defaults to false. If set to true, the level is increased and the object is stored in the new highest
+ *                  level. The specified level (or the current highest level if unspecified) is the level that is copied
+ *                  to the newly created level.
+ * @param replace   Defaults to false. If set to true, this function will always create a new wrapper object and store it at the
  *                  given level. Any existing object will be replaced. This new object will NOT be stored in any other levels, even
  *                  if an existing object is present in other levels.
  */
-Stat putWrappedField(Exp key, Exp val, Type \type, Exp env = load("env"), str field = "retEnv", bool replace = false) {
-    Stat repl = putObjectField(key, newWrapper(val, \type), env = env, field = field);
+Stat putWrapped(Exp key, Exp val, Type \type, Exp level = null(), Exp env = defaultEnvField, bool inc = false, bool replace = false) {
+    Stat repl = putObject(key, newWrapper(val, \type), level = level, env = env, inc = inc);
     if (replace) return repl;
     tuple[Type w, Type v] t = wrapperType(\type);
     cnt += 1;
     str wrapper = "__FBEG_tmp_<cnt>";
     return block([
-        decl(t.w, wrapper, init = findObject(key, t.w, env = env)),
-        \if(
-            eq(load(wrapper), null()),
-            [repl],
-            [putWrapper(load(wrapper), val, \type), putField(envType(), field, env)]
-        )
-    ]);
-}
-
-/**
- *  Maps the given key to the given value in the environment, and wraps the value of the given type into a wrapper object.
- *  If a wrapper object with the given key is not present in the given environment, a new object will be stored in it.
- *  If a wrapper object with the given key is present in the given environment, its value will be replaced by the new value
- *  and this is also reflected to all other environments in which the wrapper object is stored; the wrapper acts as a reference.
- *  This function loads the environment variable with the given name and stores the
- *  new environment in the same variable, thus overwriting the old environment.
- * 
- *  @param key      The key to map to the object.
- *  @param value    The object to store in the environment.
- *  @param envVar   The name of the (non-final) local variable holding the environment. Defaults to "env".
- *  @param replace  Defaults to false. If set to true, this function will always create a new wrapper object and store it at the
- *                  given level. Any existing object will be replaced. This new object will NOT be stored in any other levels, even
- *                  if an existing object is present in other levels.
- */
-Stat putWrapped(Exp key, Exp val, Type \type, str envVar = "env", bool replace = false) {
-    Stat repl = putObject(key, newWrapper(val, \type), envVar = envVar);
-    if (replace) return repl;
-    tuple[Type w, Type v] t = wrapperType(\type);
-    cnt += 1;
-    str wrapper = "__FBEG_tmp_<cnt>";
-    return block([
-        decl(t.w, wrapper, init = findObject(key, t.w, env = load(envVar))),
+        decl(t.w, wrapper, init = findObject(key, t.w, level = level, env = env)),
         \if(
             eq(load(wrapper), null()),
             [repl],
@@ -279,4 +249,13 @@ private tuple[Type,Type] wrapperType(Type \type) {
         default:            return <object("fbeg.wrapper.ObjectWrapper"), object()>;
     }
     return <object("fbeg.wrapper.<name>Wrapper"), \type>;
+}
+
+private Exp invoke(Exp env, Type ret, str name, list[Type] argTypes, list[Exp] args) {
+    return invokeVirtual(
+        object("fbeg.Env"),
+        env,
+        methodDesc(ret, name, argTypes),
+        args
+    );
 }

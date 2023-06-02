@@ -93,7 +93,10 @@ Exp fromObject(Exp exp, Type \type) {
     if (obj == object()) return checkcast(exp, \type);
     return invokeVirtual(
         obj,
-        exp,
+        checkcast(
+            exp,
+            obj
+        ),
         methodDesc(
             \type,
             primMethod(\type),

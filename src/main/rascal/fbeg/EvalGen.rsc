@@ -3,13 +3,13 @@ module fbeg::EvalGen
 import Type;
 import List;
 import Map;
-import IO;
 
 import lang::flybytes::Syntax;
 import lang::flybytes::Compiler;
 
 import fbeg::Switch;
-import fbeg::Envx;
+import fbeg::Env;
+import fbeg::api::Types;
 
 private str vl = "io.usethesource.vallang.";
 
@@ -65,8 +65,7 @@ private java loc getDir();
     map[Symbol, Production] definitions = ft.definitions;
     map[Symbol, Type] types = (sym : symbolToType(extractRet(ret)) | sym <- definitions) + retTypes;
     compileHelpers(helperClasses);
-    compileEval(symbol, evalName, ret, definitions, types, actions, javaToRascal, fields, helperMethods, addInitEnv(constructorCode, fields),
-            addPutEnv(ft, preApplyCode, fields), debug);
+    compileEval(symbol, evalName, ret, definitions, types, actions, javaToRascal, fields, helperMethods, constructorCode, preApplyCode, debug);
     return typeCast(funcType, genEvalFunc(ft, evalName));
 }
 
@@ -143,6 +142,8 @@ Exp getArg(sym: Symbol::label(_, _)) {
     );
 }
 
+Exp getArg(sym: Symbol::label(_, _), Type \type) = fromRascalType(getArg(sym), \type);
+
 /**
  *  Returns a statement that declares a variable with the given name and assigns the subtree,
  *  represented by the given symbol, from the current node, to it (as obtained by getArg).
@@ -199,6 +200,14 @@ Exp recEval(Exp exp, sym: Symbol::adt(str name, _), Exp env = load("env")) {
     );
 }
 
+Stat \return(Exp val, Exp env) =
+    env == retEnv()
+    ?   \return(val)
+    :   block([
+            setRetEnv(val = env),
+            \return(val)
+        ]);
+
 /**
  *  Returns the default list of fields for an interpreter class.
  *  By default, this list only contains an "env" field holding an
@@ -208,13 +217,13 @@ list[Field] defaultFields = [
     field(
         envType(),
         "globalEnv",
-        modifiers = {\private()},
+        modifiers = {\protected()},
         init = newEnv()
     ),
     field(
         envType(),
         "retEnv",
-        modifiers = {\private()}
+        modifiers = {\protected()}
     )
 ];
 
@@ -251,29 +260,6 @@ Stat defaultPutEnv(int index) = putField(
         object("fbeg.Env")
     )
 );
-
-private list[Stat] addInitEnv(list[Stat] constructorCode, list[Field] fields) {
-    return constructorCode;
-    /*if (constructorCode != []) return constructorCode;
-    for (Field field <- fields) {
-        if (field.\type == object("fbeg.Env") && field.name == "env")
-            return [defaultInitEnv];
-    }
-    return constructorCode;//*/
-}
-
-private list[Stat] addPutEnv(type[&F] funcType, list[Stat] preApplyCode, list[Field] fields) {
-    return preApplyCode;
-    /*if (preApplyCode != []) return preApplyCode;
-    list[Symbol] params = funcType.symbol.parameters;
-    int first = indexOf(params, \value());
-    if (first == -1 || first != lastIndexOf(params, \value())) return preApplyCode;
-    for (Field field <- fields) {
-        if (field.\type == object("fbeg.Env") && field.name == "env")
-            return [defaultPutEnv(first)];
-    }
-    return preApplyCode;//*/
-}
 
 private void compileHelpers(list[Class] helpers) {
     for (Class cl <- helpers) {

@@ -3,7 +3,6 @@ module fbeg::demo::func::Eval
 import fbeg::demo::func::AST;
 
 import List;
-import IO;
 import Type;
 
 alias Res = tuple[int val, Env env];

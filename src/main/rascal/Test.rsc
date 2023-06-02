@@ -35,10 +35,22 @@ void compileTest() {
             main(
                 "args",
                 [
-                    decl(array(double()), "u", init = newArray(
-                        array(double()),
-                        dconst(3.)
-                    )),
+                    decl(integer(), "a"),
+                    \if(
+                        eq(iconst(1), iconst(1)),
+                        [
+                            decl(integer(), "b", init = add(
+                                iconst(2),
+                                sblock(
+                                    [
+                                        decl(integer(), "aaa", init = iconst(20)),
+                                        store("a", iconst(10))
+                                    ],
+                                    load("aaa")
+                                )
+                            ))
+                        ]
+                    ),
                     \return()
                 ]
             )

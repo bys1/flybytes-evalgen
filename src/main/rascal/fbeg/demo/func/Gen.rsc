@@ -4,7 +4,7 @@ import Type;
 
 import lang::flybytes::Syntax;
 
-import fbeg::Envx;
+import fbeg::Env;
 import fbeg::EvalGen;
 import fbeg::api::Iterator;
 import fbeg::api::Types;
@@ -78,28 +78,25 @@ list[Stat] actions("loop", [Symbol condition, Symbol then, Symbol result]) = [
 ];
 
 list[Stat] actions("var", [Symbol name]) = [
-    setRetEnv(),
     \return(
         findWrapped(
-            fromRascalType(getArg(name), string()),
+            getArg(name, string()),
             integer()
-        )
+        ),
+        load("env")
     )
 ];
 
 list[Stat] actions("avar", [Symbol name, Symbol index]) = [
     \return(
         aload(
-            findObject(fromRascalType(getArg(name), string()), array(integer())),
+            findObject(getArg(name, string()), array(integer())),
             recEval(index)
         )
     )
 ];
 
-list[Stat] actions("nat", [Symbol n]) = [
-    setRetEnv(),
-    \return(fromRascalType(getArg(n), integer()))
-];
+list[Stat] actions("nat", [Symbol n]) = [\return(getArg(n, integer()), load("env"))];
 
 list[Stat] actions("call", [Symbol name, Symbol args]) = [
     decl(object("EvalFuncEnv"), "func", init = findObject(
@@ -149,7 +146,7 @@ list[Stat] actions("seq", [Symbol lhs, Symbol rhs]) = [\do(recEval(lhs)), \retur
 list[Stat] actions("assign", [Symbol name, Symbol exp]) = [
     decl(integer(), "exp", init = recEval(exp)),
     putWrappedField(
-        fromRascalType(getArg(name), string()),
+        getArg(name, string()),
         load("exp"),
         integer(),
         env = retEnv()
@@ -160,11 +157,10 @@ list[Stat] actions("assign", [Symbol name, Symbol exp]) = [
 list[Stat] actions("aassign", [Symbol name, Symbol index, Symbol exp]) = [
     decl(integer(), "exp", init = recEval(exp)),
     astore(
-        findObject(fromRascalType(getArg(name), string()), array(integer())),
+        findObject(getArg(name, string()), array(integer())),
         recEval(index, env = retEnv()),
         load("exp")
     ),
-    setRetEnv(),
     \return(load("exp"))
 ];
 

@@ -4,4 +4,4 @@ recadd(n) = if n <= 1 then
                 1 + recadd(n-1)
             end
 
-main() = recadd(3000)
+main() = recadd(1000)
