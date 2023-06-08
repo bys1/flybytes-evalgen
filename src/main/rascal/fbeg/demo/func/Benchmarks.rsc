@@ -85,7 +85,7 @@ void bmEvalGen() {
 void benchmarkAdds() {
     list[int] counts = [1,10,100,1000,5000,10000,20000,30000];
     for (int count <- counts) 
-        println(benchmark(getAddProg(count)));
+        benchmark(getAddProg(count));
 }
 
 Prog getAddProg(int count) = prog([

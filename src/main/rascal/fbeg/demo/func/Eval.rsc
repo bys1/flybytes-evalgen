@@ -12,7 +12,7 @@ alias Env = map[str,value];
 map[str,Fun] funcEnv = ();
 
 Res eval(prog(list[Func] funcs), Env env) {
-    funcEnv = ();
+    //funcEnv = ();
     for (Func f <- funcs) eval(f, env);
     return eval(call("main", []), env);
 }

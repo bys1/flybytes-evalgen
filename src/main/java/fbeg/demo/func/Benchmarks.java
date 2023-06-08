@@ -1,4 +1,4 @@
-package fbeg.func.demo;
+package fbeg.demo.func;
 
 import io.usethesource.vallang.IValue;
 import io.usethesource.vallang.IValueFactory;
