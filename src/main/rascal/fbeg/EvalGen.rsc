@@ -58,21 +58,14 @@ private java loc getDir();
 &F genEval(type[&F] funcType, list[Stat](str, list[Symbol]) actions, map[Symbol, Type] retTypes = (), Exp(Exp, Symbol) javaToRascal = callVF,
         list[Class] helperClasses = [], list[Field] fields = defaultFields, list[Method] helperMethods = [], list[Stat] constructorCode = [],
         list[Stat] preApplyCode = [], bool debug = false) {
-    ft = addKwTypes(funcType);
-    Symbol symbol = ft.symbol.parameters[0];
+    Symbol symbol = funcType.symbol.parameters[0];
     str evalName = "<symbol.name>Eval";
-    Symbol ret = ft.symbol.ret;
-    map[Symbol, Production] definitions = ft.definitions;
+    Symbol ret = funcType.symbol.ret;
+    map[Symbol, Production] definitions = funcType.definitions;
     map[Symbol, Type] types = (sym : symbolToType(extractRet(ret)) | sym <- definitions) + retTypes;
     compileHelpers(helperClasses);
     compileEval(symbol, evalName, ret, definitions, types, actions, javaToRascal, fields, helperMethods, constructorCode, preApplyCode, debug);
-    return typeCast(funcType, genEvalFunc(ft, evalName));
-}
-
-private type[value] addKwTypes(type[&T] t) {
-    Symbol s = t.symbol;
-    s.kwTypes = [label("env", \value()), label("globalEnv", \value())];
-    return type(s, t.definitions);
+    return genEvalFunc(funcType, evalName);
 }
 
 /**
@@ -142,6 +135,13 @@ Exp getArg(sym: Symbol::label(_, _)) {
     );
 }
 
+/**
+ *  Gets the subtree, represented by the given symbol, from the current node
+ *  and converts it to the given type.
+ *
+ *  @param sym  Symbol::label defining the subtree to obtain.
+ *  @param type The type to convert the obtained value to.
+ */
 Exp getArg(sym: Symbol::label(_, _), Type \type) = fromRascalType(getArg(sym), \type);
 
 /**
@@ -200,6 +200,14 @@ Exp recEval(Exp exp, sym: Symbol::adt(str name, _), Exp env = load("env")) {
     );
 }
 
+/**
+ *  Creates a return statement with an environment.
+ *  This statement puts the given environment in the "retEnv" field
+ *  and returns the given value.
+ *
+ *  @param val The value to return.
+ *  @param env The environment to return.
+ */
 Stat \return(Exp val, Exp env) =
     env == retEnv()
     ?   \return(val)

@@ -63,6 +63,15 @@ Type envType() = cmi;
 Exp findObject(Exp key, Exp env = load("env"))
     = invokeInterface(cmi, env, methodDesc(object(), "get", [object()]), [key]);
 
+/**
+ *  Finds the object with the given key in the given environment and converts it to the given type.
+ *
+ *  @param key  The key of the object to find.
+ *  @param type The type of the object to find. A value of this type will be returned.
+ *  @param env  The environment in which to search. Defaults to the local variable "env".
+ *
+ *  @return The value found in the environment.
+ */
 Exp findObject(Exp key, Type \type, Exp env = load("env"))
     = fromObject(findObject(key, env = env), \type);
 
@@ -128,6 +137,18 @@ Stat putObject(Exp key, Exp val, Exp env = load("env"), str envVar = "env")
 Exp putObjectCopy(Exp key, Exp val, Type \type, Exp env = load("env"))
     = putObjectCopy(key, toObject(val, \type), env = env);
 
+/**
+ *  Maps the given key to the given object in the environment, and stores the new
+ *  environment in the given field. 
+ *  The provided value should be a primitive of the specified type, and will be
+ *  converted to the corresponding class by calling the valueOf(...) method of that class.
+ *
+ *  @param key      The key to map to the object.
+ *  @param val      The object to store in the environment.
+ *  @param type     The primitive type of the value to be stored.
+ *  @param env      The environment to which the object should be added. Defaults to the local variable "env".
+ *  @param field    The name of the field in which the new environment should be stored. Defaults to "retEnv".
+ */
 Stat putObjectField(Exp key, Exp val, Type \type, Exp env = load("env"), str field = "retEnv")
     = putField(envType(), field, putObjectCopy(key, toObject(val, \type), env = env));
 

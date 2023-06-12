@@ -40,4 +40,7 @@ data Binding(loc src = |unknown:///|)
     | array(str ident, Expr size)
     ;
 
+/**
+ *  Parses the program at the given location to an AST.
+ */
 Prog parseProg(loc l) = implode(#Prog, parse(#start[Prog], l));

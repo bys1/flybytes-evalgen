@@ -15,4 +15,7 @@ data Expr = nat(int n)
           | assign(str name, Expr val)
           ;
 
+/**
+ *  Parses the program at the given location to an AST.
+ */
 Prog parseProg(loc l) = implode(#Prog, parse(#start[Prog], l));
