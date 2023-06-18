@@ -76,7 +76,7 @@ Exp findObject(Exp key, Type \type, Exp env = load("env"))
     = fromObject(findObject(key, env = env), \type);
 
 /**
- * Finds the wrapped object with the given key at the given level, and returns the (unwrapped) value.
+ * Finds the wrapped object with the given key, and returns the (unwrapped) value.
  *
  * @param key   The key of the object to find.
  * @param type  The type of the object to find. A value of this type will be returned.

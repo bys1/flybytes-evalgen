@@ -7,73 +7,15 @@ import Exception;
 
 private str vl = "io.usethesource.vallang.";
 
-private Exp rascalToInt(Exp obj) {
-    return invokeInterface(
-        object("<vl>IInteger"),
-        obj,
-        methodDesc(
-            integer(),
-            "intValue",
-            []
-        ),
-        []
-    );
-}
-
-private Exp intToRascal(Exp vf, Exp obj) {
-    return invokeInterface(
-        object("<vl>IValueFactory"),
-        vf,
-        methodDesc(
-            object("<vl>IInteger"),
-            "integer",
-            [integer()]
-        ),
-        [obj]
-    );
-}
-
-private Exp realToRascal(Exp vf, Exp obj) {
-    return invokeInterface(
-        object("<vl>IValueFactory"),
-        vf,
-        methodDesc(
-            object("<vl>IReal"),
-            "real",
-            [double()]
-        ),
-        [obj]
-    );
-}
-
-private Type primType(Type \type) {
-    switch (\type) {
-        case byte():        return object("java.lang.Byte");
-        case boolean():     return object("java.lang.Boolean");
-        case short():       return object("java.lang.Short");
-        case character():   return object("java.lang.Character");
-        case integer():     return object("java.lang.Integer");
-        case float():       return object("java.lang.Float");
-        case double():      return object("java.lang.Double");
-        case long():        return object("java.lang.Long");
-        default: return object();
-    }
-}
-
-private str primMethod(Type \type) {
-    switch (\type) {
-        case byte():        return "byteValue";
-        case boolean():     return "booleanValue";
-        case short():       return "shortValue";
-        case character():   return "charValue";
-        case integer():     return "intValue";
-        case float():       return "floatValue";
-        case double():      return "doubleValue";
-        case long():        return "longValue";
-        default: return "";
-    }
-}
-
+/**
+ *  Converts a primitive type to its corresponding object.
+ *  For example, an int will be converted to an Integer.
+ *
+ *  @param exp  The primitive to convert.
+ *  @param type The primitive type to convert from.
+ *
+ *  @returns The object representing the primitive.
+ */
 Exp toObject(Exp exp, Type \type) {
     Type obj = primType(\type);
     if (obj == object()) return exp;
@@ -88,6 +30,15 @@ Exp toObject(Exp exp, Type \type) {
     );
 }
 
+/**
+ *  Converts an object to its corresponding primitive type,
+ *  or performs a checkcast to cast to the desired object type.
+ *
+ *  @param exp  The object to convert.
+ *  @param type The type to convert to.
+ *
+ *  @returns The converted value.
+ */
 Exp fromObject(Exp exp, Type \type) {
     Type obj = primType(\type);
     if (obj == object()) return checkcast(exp, \type);
@@ -106,6 +57,16 @@ Exp fromObject(Exp exp, Type \type) {
     );
 }
 
+/**
+ *  Converts a Java object to the corresponding Rascal type using
+ *  the given IValueFactory instance.
+ *
+ *  @param vf   The IValueFactory to use.
+ *  @param obj  The Java object to convert.
+ *  @param type The Java type of the object, which can be a primitive or a string.
+ *
+ *  @returns The converted Rascal object.
+ */
 Exp toRascalType(Exp vf, Exp obj, Type \type) {
     switch (\type) {
         case byte():
@@ -157,6 +118,14 @@ Exp toRascalType(Exp vf, Exp obj, Type \type) {
     }
 }
 
+/**
+ *  Converts a Rascal object to the corresponding Java type.
+ *
+ *  @param obj  The Rascal object to convert.
+ *  @param type The Java type to convert to, which can be a primitive type or a string.
+ *
+ *  @returns The converted Java value.
+ */
 Exp fromRascalType(Exp obj, Type \type) {
     switch (\type) {
         case byte():
@@ -258,6 +227,76 @@ Type symbolToTypeClass(Symbol sym) {
     }
 }
 
+/**
+ *  Returns the Type of ASTs, which is the IConstructor interface.
+ */
 Type getTreeType() {
     return object("<vl>IConstructor");
+}
+
+private Exp rascalToInt(Exp obj) {
+    return invokeInterface(
+        object("<vl>IInteger"),
+        obj,
+        methodDesc(
+            integer(),
+            "intValue",
+            []
+        ),
+        []
+    );
+}
+
+private Exp intToRascal(Exp vf, Exp obj) {
+    return invokeInterface(
+        object("<vl>IValueFactory"),
+        vf,
+        methodDesc(
+            object("<vl>IInteger"),
+            "integer",
+            [integer()]
+        ),
+        [obj]
+    );
+}
+
+private Exp realToRascal(Exp vf, Exp obj) {
+    return invokeInterface(
+        object("<vl>IValueFactory"),
+        vf,
+        methodDesc(
+            object("<vl>IReal"),
+            "real",
+            [double()]
+        ),
+        [obj]
+    );
+}
+
+private Type primType(Type \type) {
+    switch (\type) {
+        case byte():        return object("java.lang.Byte");
+        case boolean():     return object("java.lang.Boolean");
+        case short():       return object("java.lang.Short");
+        case character():   return object("java.lang.Character");
+        case integer():     return object("java.lang.Integer");
+        case float():       return object("java.lang.Float");
+        case double():      return object("java.lang.Double");
+        case long():        return object("java.lang.Long");
+        default: return object();
+    }
+}
+
+private str primMethod(Type \type) {
+    switch (\type) {
+        case byte():        return "byteValue";
+        case boolean():     return "booleanValue";
+        case short():       return "shortValue";
+        case character():   return "charValue";
+        case integer():     return "intValue";
+        case float():       return "floatValue";
+        case double():      return "doubleValue";
+        case long():        return "longValue";
+        default: return "";
+    }
 }
