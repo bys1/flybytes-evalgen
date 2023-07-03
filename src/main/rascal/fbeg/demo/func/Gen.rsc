@@ -87,15 +87,6 @@ list[Stat] actions("var", [Symbol name]) = [
     )
 ];
 
-list[Stat] actions("avar", [Symbol name, Symbol index]) = [
-    \return(
-        aload(
-            findObject(getArg(name, string()), array(integer())),
-            recEval(index)
-        )
-    )
-];
-
 list[Stat] actions("nat", [Symbol n]) = [\return(getArg(n, integer()), load("env"))];
 
 list[Stat] actions("call", [Symbol name, Symbol args]) = [
@@ -121,13 +112,14 @@ list[Stat] actions("call", [Symbol name, Symbol args]) = [
             )
         ]
     ),
-    decl(integer(), "ret", init = recEval(
-        getField(object("EvalFuncEnv"), load("func"), getTreeType(), "exp"),
-        args,
-        env = load("newEnv")
-    )),
-    setRetEnv(),
-    \return(load("ret"))
+    \return(
+        recEval(
+            getField(object("EvalFuncEnv"), load("func"), getTreeType(), "exp"),
+            args,
+            env = load("newEnv")
+        ),
+        load("env")
+    )
 ];
 
 list[Stat] actions("add", [Symbol lhs, Symbol rhs]) = [\return(add(recEval(lhs), recEval(rhs, env = retEnv())))];
@@ -154,33 +146,12 @@ list[Stat] actions("assign", [Symbol name, Symbol exp]) = [
     \return(load("exp"))
 ];
 
-list[Stat] actions("aassign", [Symbol name, Symbol index, Symbol exp]) = [
-    decl(integer(), "exp", init = recEval(exp)),
-    astore(
-        findObject(getArg(name, string()), array(integer())),
-        recEval(index, env = retEnv()),
-        load("exp")
-    ),
-    \return(load("exp"))
-];
-
 list[Stat] actions("binding", [Symbol ident, Symbol exp]) = [
     putWrappedField(
         fromRascalType(getArg(ident), string()),
         recEval(exp),
         integer(),
         replace = true                                          // Always replace to allow shadowing
-    ),
-    \return(iconst(0))
-];
-
-list[Stat] actions("array", [Symbol ident, Symbol size]) = [
-    putObjectField(
-        fromRascalType(getArg(ident), string()),
-        newArray(
-            array(integer()),
-            recEval(size)
-        )
     ),
     \return(iconst(0))
 ];

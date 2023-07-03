@@ -65,14 +65,13 @@ Exp compile(loop(Expr condition, Expr then, Expr result)) = sblock(
 );
 
 Exp compile(var(str name)) = load(name);
-Exp compile(avar(str name, Expr index)) = aload(load(name), compile(index));
 Exp compile(nat(int n)) = iconst(n);
 
 Exp compile(call(str name, list[Expr] args)) = invokeStatic(
     methodDesc(
         integer(),
         name,
-        [integer() | n <- [0 .. size(args)]]
+        [integer() | _ <- [0 .. size(args)]]
     ),
     [compile(arg) | arg <- args]
 );
@@ -90,19 +89,6 @@ Exp compile(leq(Expr lhs, Expr rhs)) =  le(compile(lhs), compile(rhs));
 
 Exp compile(assign(str name, Expr exp)) = sblock([store(name, compile(exp))], load(name));
 
-Exp compile(aassign(str name, Expr index, Expr exp)) {
-    cnt += 1;
-    str tmp = "__FBEG_tmp_<cnt>";
-    return sblock(
-        [
-            decl(integer(), tmp, init = compile(exp)),
-            astore(load(name), compile(index), load(tmp))
-        ],
-        load(tmp)
-    );
-}
-
 Exp compile(seq(Expr lhs, Expr rhs)) = sblock([\do(compile(lhs))], compile(rhs));
 
 Stat compile(binding(str ident, Expr exp)) = decl(integer(), ident, init = compile(exp));
-Stat compile(array(str ident, Expr size)) = decl(array(integer()), ident, init = newArray(array(integer()), compile(size)));

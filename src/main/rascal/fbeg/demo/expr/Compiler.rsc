@@ -13,21 +13,11 @@ Class compile(prog(list[Expr] exprs, Expr ret), str name) = class(
     object(name),
     methods = [main(
         "args",
-        [compile(e) | e <- exprs]
-        +
-        [
+        [compile(e) | e <- exprs] + [
             \do(invokeVirtual(
                 object("java.io.PrintStream"),
-                getStatic(
-                    object("java.lang.System"),
-                    object("java.io.PrintStream"),
-                    "out"
-                ),
-                methodDesc(
-                    \void(),
-                    "println",
-                    [integer()]
-                ),
+                getStatic(object("java.lang.System"), object("java.io.PrintStream"), "out"),
+                methodDesc(\void(), "println", [integer()]),
                 [compile(ret)]
             )),
             \return()

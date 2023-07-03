@@ -47,11 +47,6 @@ Res eval(loop(Expr condition, Expr then, Expr result), Env env) {
 
 Res eval(var(str name), Env env) = <typeCast(#int, env[name]), env>;
 
-Res eval(avar(str name, Expr index), Env env) {
-    Res idx = eval(index, env);
-    return <typeCast(#list[int], idx.env[name])[idx.val], idx.env>;
-}
-
 Res eval(nat(int n), Env env) = <n, env>;
 
 Res eval(call(str name, list[Expr] args), Env env) {
@@ -129,22 +124,9 @@ Res eval(assign(str name, Expr exp), Env env) {
     return <res.val, res.env + (name : res.val)>;
 }
 
-Res eval(aassign(str name, Expr index, Expr exp), Env env) {
-    Res idx = eval(index, env);
-    Res res = eval(exp, idx.env);
-    list[int] arr = typeCast(#list[int], res.env[name]);
-    arr[idx.val] = res.val;
-    return <res.val, res.env + (name : arr)>;
-}
-
 Res eval(seq(Expr lhs, Expr rhs), Env env) {
     Res res = eval(lhs, env);
     return eval(rhs, res.env);
 }
 
 Res eval(binding(str ident, Expr exp), Env env) = eval(assign(ident, exp), env);
-
-Res eval(array(str ident, Expr size), Env env) {
-    Res res = eval(size, env);
-    return <res.val, res.env + (ident : [0 | _ <- [0..res.val]])>;
-}
